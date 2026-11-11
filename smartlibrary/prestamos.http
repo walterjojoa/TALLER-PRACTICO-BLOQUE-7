@@ -1,0 +1,35 @@
+### Peticiones de prueba para SmartLibrary (VS Code REST Client o IntelliJ HTTP Client)
+@api = http://localhost:8080/api/prestamos
+
+### 1. Prestamo de libro disponible -> 201 Created
+POST {{api}}
+Content-Type: application/json
+
+{ "estudianteId": "est-1", "libroId": "lib-1" }
+
+### 2. Libro ya prestado -> 409 Conflict
+POST {{api}}
+Content-Type: application/json
+
+{ "estudianteId": "est-2", "libroId": "lib-1" }
+
+### 3. Estudiante inexistente -> 404 Not Found
+POST {{api}}
+Content-Type: application/json
+
+{ "estudianteId": "est-99", "libroId": "lib-2" }
+
+### 4. Libro inexistente -> 404 Not Found
+POST {{api}}
+Content-Type: application/json
+
+{ "estudianteId": "est-1", "libroId": "lib-99" }
+
+### 5. Consulta de prestamos -> 200 OK
+GET {{api}}
+
+### Extra. Solicitud sin libroId -> 400 Bad Request
+POST {{api}}
+Content-Type: application/json
+
+{ "estudianteId": "est-1" }

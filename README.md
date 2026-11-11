@@ -29,7 +29,7 @@ Los diagramas 1, 3 y 4 están en el proyecto de Visual Paradigm `diagramas/visua
 ├── smartlibrary/                            Proyecto Spring Boot + MongoDB
 ├── evidencias/
 │   ├── pruebas_automaticas.txt              12 pruebas JUnit (12 de 12 pasan)
-│   └── pruebas_api.md                       Peticiones HTTP reales contra MongoDB y sus respuestas
+│   └── pruebas_api.md                       Salida de probar-api.cmd contra MongoDB 9.0 instalado
 ├── entregables/
 │   ├── Decisiones_de_diseno.docx            Explicación de una página
 │   └── Decisiones_de_diseno.pdf
@@ -53,23 +53,32 @@ smartlibrary/src/main/java/com/smartlibrary/
 
 **Colecciones en MongoDB:** `estudiantes`, `libros` y `prestamos`. Cada préstamo guarda **referencias** (`@DocumentReference`) a su estudiante y su libro, no copias embebidas.
 
-### Cómo ejecutarlo
+### Cómo ejecutarlo en Windows
 
-Requiere **JDK 21**. No hace falta instalar Maven, porque el proyecto trae Maven Wrapper.
+La carpeta `smartlibrary/` trae scripts para cada paso:
+
+| Script | Qué hace |
+|---|---|
+| `instalar-requisitos.cmd` | Instala con winget **MongoDB Server** (como servicio de Windows), **mongosh** y **JDK 21**. Se ejecuta una sola vez; Windows pedirá permiso de administrador |
+| `iniciar-api.cmd` | Comprueba que MongoDB esté corriendo y levanta la API en `http://localhost:8080` |
+| `probar-api.cmd` | Ejecuta los escenarios de la Actividad 6 con curl y muestra los documentos guardados en MongoDB |
+| `reiniciar-datos.cmd` | Borra la base `smartlibrary` para empezar de cero. Al reiniciar la API se cargan otra vez los datos de prueba |
+| `prestamos.http` | Las mismas peticiones, para ejecutarlas desde VS Code (REST Client) o IntelliJ |
+
+**Primera vez:** `instalar-requisitos.cmd`, luego abrir una terminal nueva y ejecutar `iniciar-api.cmd`.
+
+**Demostración limpia:** `reiniciar-datos.cmd`, luego `iniciar-api.cmd` y, en otra terminal, `probar-api.cmd`.
+
+Pruebas automáticas (no necesitan MongoDB; no hace falta instalar Maven porque el proyecto trae Maven Wrapper):
 
 ```bash
 cd smartlibrary
-./mvnw test             # 12 pruebas; NO necesitan MongoDB
-./mvnw spring-boot:run  # levanta la API en http://localhost:8080
+mvnw.cmd test        # en Linux/Mac: ./mvnw test
 ```
 
-En Windows se usa `mvnw.cmd` en lugar de `./mvnw`.
+**Conexión a MongoDB:** por defecto la API usa `mongodb://localhost:27017/smartlibrary`. Para usar **MongoDB Atlas**, define la variable de entorno `MONGODB_URI` con tu cadena de conexión. No escribas usuarios ni contraseñas en `application.properties`.
 
-Para **ejecutar la API** sí se necesita MongoDB:
-- **MongoDB local:** se conecta por defecto a `mongodb://localhost:27017/smartlibrary`.
-- **MongoDB Atlas:** define la variable de entorno `MONGODB_URI` con tu cadena de conexión. No escribas usuarios ni contraseñas en `application.properties`.
-
-Al arrancar se cargan los estudiantes `est-1` y `est-2` y los libros `lib-1`, `lib-2` y `lib-3`, todos disponibles.
+Al arrancar se cargan los estudiantes `est-1` y `est-2` y los libros `lib-1`, `lib-2` y `lib-3`, todos disponibles. Para ver los datos: `mongosh mongodb://localhost:27017/smartlibrary` y luego `db.prestamos.find()`.
 
 ### Endpoints
 
