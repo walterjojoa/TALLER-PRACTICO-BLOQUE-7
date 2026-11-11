@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Taller SmartLibrary</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Space+Grotesk:wght@500;600&display=swap">
+<style>
+/* Layout: una columna de lectura tipo cuaderno técnico; diagramas en marcos de plano que pueden desplazarse en horizontal */
+:root{
+  --bg:#f6f8fb; --surface:#ffffff; --fg:#17202c; --muted:#5a6676; --line:#d5dde8;
+  --accent:#1f5fa8; --accent-soft:#e3edf8; --ok:#1d7a4c; --warn:#a6431f;
+  --f-display:"Space Grotesk",system-ui,sans-serif; --f-body:"IBM Plex Sans",system-ui,sans-serif; --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f141b; --surface:#161d27; --fg:#e4e9f0; --muted:#97a3b3; --line:#2a3542;
+  --accent:#7fb0ea; --accent-soft:#1c2a3b; --ok:#6cc79a; --warn:#ee9a78; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f141b; --surface:#161d27; --fg:#e4e9f0; --muted:#97a3b3; --line:#2a3542;
+  --accent:#7fb0ea; --accent-soft:#1c2a3b; --ok:#6cc79a; --warn:#ee9a78; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font:15px/1.6 var(--f-body)}
+.wrap{max-width:980px;margin:0 auto;padding-block:40px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:48px}
+header{display:flex;flex-direction:column;gap:8px}
+.eyebrow{font:500 12px/1 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+h1{font:600 clamp(28px,5vw,40px)/1.1 var(--f-display);margin:0;text-wrap:balance}
+h2{font:600 24px/1.2 var(--f-display);margin:0;text-wrap:balance}
+h3{font:600 16px/1.3 var(--f-body);margin:0}
+p{margin:0;max-width:68ch}
+.lead{color:var(--muted);font-size:16px}
+section{display:flex;flex-direction:column;gap:16px;min-width:0}
+.sechead{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:8px}
+.sechead .t{font:500 12px var(--f-mono);color:var(--muted)}
+code,.mono{font-family:var(--f-mono);font-size:.9em}
+code{background:var(--accent-soft);padding:1px 5px;border-radius:3px}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:620px}
+th,td{text-align:left;vertical-align:top;padding:10px 12px;border-bottom:1px solid var(--line)}
+th{font:500 12px var(--f-mono);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);background:var(--accent-soft)}
+tr:last-child td{border-bottom:0}
+td.cls{font-family:var(--f-mono);font-size:13px;color:var(--accent);white-space:nowrap}
+.diagram{overflow-x:auto;border:1px solid var(--line);border-radius:6px;background:var(--surface);padding:16px;
+  background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:24px 24px;background-position:-1px -1px}
+.diagram pre.mermaid{margin:0;background:transparent;min-width:640px}
+.file{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font:13px var(--f-mono);color:var(--muted)}
+.file b{color:var(--fg);font-weight:500}
+ol,ul{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:6px;max-width:72ch}
+.qa{display:grid;gap:14px}
+.qa div{display:flex;flex-direction:column;gap:4px;border-left:2px solid var(--line);padding-left:14px}
+.qa h3{color:var(--accent)}
+.legend{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.legend div{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.legend .k{font:500 13px var(--f-mono)}
+.legend .v{color:var(--muted);font-size:13px}
+.s201,.s200{color:var(--ok);font-family:var(--f-mono);font-weight:500}
+.s4xx{color:var(--warn);font-family:var(--f-mono);font-weight:500}
+.steps{counter-reset:s}
+.note{background:var(--accent-soft);border-radius:6px;padding:12px 14px;max-width:72ch}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+<header>
+  <span class="eyebrow">Diseño de Software · Bloque 7 · Taller guiado</span>
+  <h1>SmartLibrary: del GestorPrestamos a tres capas</h1>
+  <p class="lead">Solución de las actividades 1, 2, 3, 4 y 7, con los criterios de verificación de la 5 y la 6. Los diagramas están dibujados aquí para revisarlos y también como archivos PlantUML listos para importar en Visual Paradigm.</p>
+  <div class="file">Proyecto Visual Paradigm: <b>diagramas/visual-paradigm/SmartLibrary_Taller7.vpp</b></div>
+</header>
+
+<!-- ACTIVIDAD 1 -->
+<section>
+  <div class="sechead"><h2>Actividad 1 · Leer y cuestionar el modelo</h2><span class="t">20 min · entregable: diagrama inicial anotado</span></div>
+  <div class="diagram"><pre class="mermaid">
+classDiagram
+direction LR
+class GestorPrestamos {
+  -estudiantes: List~Estudiante~
+  -libros: List~Libro~
+  -prestamos: List~Prestamo~
+  +registrarPrestamo(e: Estudiante, l: Libro) Prestamo
+  +getEstudiantes() / setEstudiantes()
+  +getLibros() / setLibros()
+  +getPrestamos() / setPrestamos()
+}
+class Estudiante {
+  -id: Long
+  -nombre: String
+  -correo: String
+}
+class Libro {
+  -id: Long
+  -titulo: String
+  -disponible: boolean
+  +isDisponible() boolean
+  +setDisponible(valor) void
+  +marcarPrestado() void
+}
+class Prestamo {
+  -id: Long
+  -fechaPrestamo: LocalDate
+  -fechaDevolucion: LocalDate [0..1]
+  -estudiante: Estudiante
+  -libro: Libro
+}
+GestorPrestamos "1" -- "0..*" Estudiante : registra
+GestorPrestamos "1" -- "0..*" Libro : administra
+GestorPrestamos "1" -- "0..*" Prestamo : gestiona
+Estudiante "1" -- "0..*" Prestamo : historial
+Libro "1" -- "0..*" Prestamo : historial
+note for GestorPrestamos "OBS 1-3: baja cohesión, listas en memoria\nsin persistencia, setters de colecciones\nque rompen el encapsulamiento"
+note for Libro "OBS 4: setDisponible() público permite saltarse R1"
+note for Prestamo "OBS 5: fechaDevolucion null = préstamo activo (R5)"
+  </pre></div>
+  <div class="file">Archivo VP: <b>01_modelo_inicial_anotado.puml</b></div>
+
+  <div class="qa">
+    <div><h3>a) Datos y operaciones propios del dominio</h3>
+      <p><b>Datos:</b> <code>Estudiante(id, nombre, correo)</code>, <code>Libro(id, titulo, disponible)</code> y <code>Prestamo(id, fechaPrestamo, fechaDevolucion, estudiante, libro)</code>. <b>Operaciones de dominio:</b> <code>Libro.isDisponible()</code>, <code>Libro.marcarPrestado()</code> y la creación de un <code>Prestamo</code>. Los getters y setters son accesores, no lógica. Las listas de <code>GestorPrestamos</code> no pertenecen al dominio: son almacenamiento.</p></div>
+    <div><h3>b) Por qué Libro–Prestamo y Estudiante–Prestamo son asociaciones y no composiciones</h3>
+      <p>En una composición la parte muere con el todo. Aquí ni el libro ni el estudiante dependen del préstamo: existen antes de él, siguen existiendo cuando se devuelve y pueden aparecer en muchos préstamos (0..*). Borrar un préstamo no puede borrar el libro. Tampoco hay relación todo-parte (un préstamo no está hecho de libros), así que tampoco es agregación. Es una referencia estructural: <code>Prestamo</code> guarda un atributo <code>estudiante</code> y otro <code>libro</code>.</p></div>
+    <div><h3>c) Operaciones para consultar, validar y guardar</h3>
+      <ul>
+        <li><b>Consultar:</b> buscar estudiante por id, buscar libro por id, listar préstamos y saber si un libro tiene préstamo activo.</li>
+        <li><b>Validar:</b> que la solicitud traiga ids no nulos (R4), que existan estudiante y libro, y que el libro esté disponible (R1 y R5).</li>
+        <li><b>Guardar:</b> persistir el préstamo nuevo y el libro con <code>disponible = false</code> (R2 y R3), las dos cosas en una misma transacción.</li>
+      </ul></div>
+    <div><h3>d) Responsabilidades que faltan</h3>
+      <p><b>HTTP:</b> nadie recibe <code>POST /api/prestamos</code>, convierte el JSON en un objeto, valida el formato ni traduce el resultado a códigos 201, 404 o 409. Falta un <code>PrestamoController</code>, con un DTO <code>PrestamoRequest</code> y un manejador de excepciones. <b>Datos:</b> las listas en memoria no persisten ni permiten búsquedas por id. Faltan <code>EstudianteRepository</code>, <code>LibroRepository</code> y <code>PrestamoRepository</code>.</p></div>
+  </div>
+</section>
+
+<!-- ACTIVIDAD 2 -->
+<section>
+  <div class="sechead"><h2>Actividad 2 · Asignar responsabilidades</h2><span class="t">25 min · entregable: tabla completa</span></div>
+  <div class="tbl"><table>
+    <thead><tr><th>Operación o decisión</th><th>Clase responsable</th><th>Justificación</th></tr></thead>
+    <tbody>
+      <tr><td>Recibir <code>POST /api/prestamos</code></td><td class="cls">PrestamoController</td><td>Es la frontera HTTP. Mapea la ruta, convierte el JSON en <code>PrestamoRequest</code> y aplica <code>@Valid</code>. No contiene reglas de negocio.</td></tr>
+      <tr><td>Buscar estudiante por identificador</td><td class="cls">EstudianteRepository<br>(lo invoca PrestamoService)</td><td>El acceso a datos de estudiantes es responsabilidad de su repositorio (<code>findById</code>). El servicio decide qué hacer si no existe (404).</td></tr>
+      <tr><td>Buscar libro por identificador</td><td class="cls">LibroRepository<br>(lo invoca PrestamoService)</td><td>Igual que el anterior. Cada repositorio maneja una sola entidad, lo que da alta cohesión.</td></tr>
+      <tr><td>Validar disponibilidad</td><td class="cls">PrestamoService + Libro</td><td>Es una regla de negocio (R1, R5), así que va en la capa de servicio, que coordina el caso de uso. El dato y la verificación pertenecen a <code>Libro.isDisponible()</code> (Experto en información).</td></tr>
+      <tr><td>Crear el préstamo</td><td class="cls">PrestamoService</td><td>Creador (GRASP): el servicio tiene los datos de inicialización (estudiante, libro y fecha actual) y hace <code>new Prestamo(...)</code> (R2).</td></tr>
+      <tr><td>Cambiar disponibilidad</td><td class="cls">Libro.marcarPrestado()</td><td>Experto en información: el libro conoce su estado y lo protege. El servicio solo invoca el método (R3).</td></tr>
+      <tr><td>Guardar cambios</td><td class="cls">PrestamoRepository<br>LibroRepository</td><td>Persistencia con <code>save()</code>. El servicio marca el método con <code>@Transactional</code> para que libro y préstamo se guarden juntos o ninguno se guarde (R4).</td></tr>
+      <tr><td>Devolver respuesta HTTP</td><td class="cls">PrestamoController<br>ManejadorExcepciones</td><td>Construye <code>201 Created</code> con <code>PrestamoResponse</code>. El <code>@RestControllerAdvice</code> traduce las excepciones a 404 y 409.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ACTIVIDAD 3 -->
+<section>
+  <div class="sechead"><h2>Actividad 3 · Diagrama de clases por capas</h2><span class="t">30 min · entregable: diagrama con relaciones y multiplicidades</span></div>
+  <div class="diagram"><pre class="mermaid">
+classDiagram
+direction TB
+class PrestamoController {
+  <<RestController>>
+  -prestamoService: PrestamoService
+  +registrar(request: PrestamoRequest) ResponseEntity~PrestamoResponse~
+  +listar() ResponseEntity~List~
+}
+class ManejadorExcepciones {
+  <<RestControllerAdvice>>
+  +manejarNoEncontrado(ex) ResponseEntity
+  +manejarNoDisponible(ex) ResponseEntity
+}
+class PrestamoRequest {
+  <<record DTO>>
+  +estudianteId: Long NotNull
+  +libroId: Long NotNull
+}
+class PrestamoResponse {
+  <<record DTO>>
+  +id: Long
+  +estudianteNombre: String
+  +libroTitulo: String
+  +fechaPrestamo: LocalDate
+  +desde(p: Prestamo)$ PrestamoResponse
+}
+class PrestamoService {
+  <<Service>>
+  -estudianteRepository: EstudianteRepository
+  -libroRepository: LibroRepository
+  -prestamoRepository: PrestamoRepository
+  +registrarPrestamo(request: PrestamoRequest) Prestamo
+  +listarPrestamos() List~Prestamo~
+}
+class RecursoNoEncontradoException {
+  <<exception>>
+}
+class LibroNoDisponibleException {
+  <<exception>>
+}
+class JpaRepository~T,ID~ {
+  <<interface>>
+  +findById(id: ID) Optional~T~
+  +findAll() List~T~
+  +save(entidad: T) T
+}
+class EstudianteRepository {
+  <<interface>>
+}
+class LibroRepository {
+  <<interface>>
+}
+class PrestamoRepository {
+  <<interface>>
+  +existsByLibroIdAndFechaDevolucionIsNull(libroId: Long) boolean
+}
+class Estudiante {
+  <<Entity>>
+  -id: Long
+  -nombre: String
+  -correo: String
+  +getNombre() String
+}
+class Libro {
+  <<Entity>>
+  -id: Long
+  -titulo: String
+  -disponible: boolean
+  +isDisponible() boolean
+  +marcarPrestado() void
+}
+class Prestamo {
+  <<Entity>>
+  -id: Long
+  -fechaPrestamo: LocalDate
+  -fechaDevolucion: LocalDate [0..1]
+  -estudiante: Estudiante
+  -libro: Libro
+  +Prestamo(estudiante, libro, fecha)
+  +estaActivo() boolean
+}
+PrestamoController "1" --> "1" PrestamoService
+PrestamoService "1" --> "1" EstudianteRepository
+PrestamoService "1" --> "1" LibroRepository
+PrestamoService "1" --> "1" PrestamoRepository
+JpaRepository <|-- EstudianteRepository
+JpaRepository <|-- LibroRepository
+JpaRepository <|-- PrestamoRepository
+Prestamo "0..*" --> "1" Estudiante : estudiante
+Prestamo "0..*" --> "1" Libro : libro
+PrestamoController ..> PrestamoRequest : «use»
+PrestamoController ..> PrestamoResponse : «create»
+PrestamoService ..> PrestamoRequest : «use»
+PrestamoService ..> Prestamo : «create»
+PrestamoService ..> RecursoNoEncontradoException : «throw»
+Libro ..> LibroNoDisponibleException : «throw»
+ManejadorExcepciones ..> RecursoNoEncontradoException : «use»
+ManejadorExcepciones ..> LibroNoDisponibleException : «use»
+  </pre></div>
+  <div class="file">Archivo VP: <b>02_diagrama_clases_capas.puml</b> (incluye paquetes controller, dto, service, repository y model)</div>
+
+  <h3>Cómo se tipificó cada relación</h3>
+  <div class="legend">
+    <div><span class="k">Controller → Service → Repository</span><span class="v">Asociación dirigida 1 a 1. Cada capa guarda la siguiente como atributo inyectado por constructor, que es una referencia mantenida. La dirección nunca se invierte, y el Controller no toca ningún Repository.</span></div>
+    <div><span class="k">Prestamo → Estudiante / Libro</span><span class="v">Asociación 0..* a 1, navegable desde Prestamo (<code>@ManyToOne</code>). Se conserva del modelo inicial. Libro y Estudiante no guardan la lista de préstamos.</span></div>
+    <div><span class="k">Repository ◁— JpaRepository</span><span class="v">Generalización entre interfaces (<code>extends</code>). No se dibuja realización porque la implementación la genera Spring Data en tiempo de ejecución: no existe una clase nuestra que la implemente.</span></div>
+    <div><span class="k">Línea punteada «use» / «create» / «throw»</span><span class="v">Dependencias de uso puntual: parámetros (Request), objetos que se crean (Prestamo, Response) y excepciones. No hay atributo, así que no son asociaciones.</span></div>
+    <div><span class="k">Sin rombos</span><span class="v">Se mantiene la decisión del modelo inicial: no hay ciclo de vida todo-parte. <code>GestorPrestamos</code> desaparece y sus listas pasan a los repositorios.</span></div>
+    <div><span class="k">Interfaces vs clases</span><span class="v">Interfaces: los 4 repositorios. Clases: el controller, el servicio, las entidades, los DTO (records) y las excepciones.</span></div>
+  </div>
+</section>
+
+<!-- ACTIVIDAD 4 -->
+<section>
+  <div class="sechead"><h2>Actividad 4 · Secuencia de POST /api/prestamos</h2><span class="t">20 min · entregable: diagrama de secuencia</span></div>
+  <div class="diagram"><pre class="mermaid">
+sequenceDiagram
+autonumber
+actor U as Usuario
+participant C as :PrestamoController
+participant S as :PrestamoService
+participant ER as :EstudianteRepository
+participant LR as :LibroRepository
+participant PR as :PrestamoRepository
+participant L as libro:Libro
+participant P as p:Prestamo
+U->>C: POST /api/prestamos {estudianteId, libroId}
+activate C
+Note right of C: @Valid PrestamoRequest (nulos = 400, R4)
+C->>S: registrarPrestamo(request)
+activate S
+Note right of S: inicia @Transactional
+S->>ER: findById(estudianteId)
+ER-->>S: Optional Estudiante (vacío = 404)
+S->>LR: findById(libroId)
+LR-->>S: Optional Libro (vacío = 404)
+S->>L: isDisponible()
+L-->>S: disponible
+alt disponible == true · préstamo exitoso
+  S->>L: marcarPrestado()
+  S->>P: «create» Prestamo(estudiante, libro, LocalDate.now())
+  S->>LR: save(libro)
+  LR-->>S: libro
+  S->>PR: save(p)
+  PR-->>S: p con id
+  Note right of S: commit
+  S-->>C: p
+  C->>C: PrestamoResponse.desde(p)
+  C-->>U: 201 Created + PrestamoResponse
+else disponible == false · libro no disponible
+  S--)C: throw LibroNoDisponibleException
+  Note right of S: rollback, no se crea préstamo (R1, R4)
+  C-->>U: 409 Conflict (vía ManejadorExcepciones)
+end
+deactivate S
+deactivate C
+  </pre></div>
+  <div class="file">Archivo VP: <b>03_diagrama_secuencia_prestamo.puml</b></div>
+  <p class="note"><b>Verificación de trazabilidad.</b> Cada mensaje existe como operación en el diagrama de clases: <code>registrarPrestamo</code>, <code>findById</code>, <code>isDisponible</code>, <code>marcarPrestado</code>, el constructor <code>Prestamo(...)</code>, <code>save</code> y <code>desde</code>. Los caminos 404 (estudiante o libro inexistente) aparecen como notas porque el taller pide solo dos caminos.</p>
+</section>
+
+<!-- ACTIVIDADES 5 y 6 -->
+<section>
+  <div class="sechead"><h2>Actividades 5 y 6 · Preparación y pruebas</h2><span class="t">70 min · en clase con el profesor</span></div>
+  <p>El código lo escribe el profesor. Esto es lo que deben verificar para que el proyecto coincida con el diseño.</p>
+  <ul>
+    <li><b>Spring Initializr:</b> Java 21, Maven, Spring Web, Spring Data JPA, Validation y H2.</li>
+    <li><b>Paquetes:</b> <code>controller</code> (PrestamoController, ManejadorExcepciones), <code>service</code> (PrestamoService y excepciones), <code>repository</code> (3 interfaces), <code>model</code> (Estudiante, Libro, Prestamo) y <code>dto</code> (PrestamoRequest, PrestamoResponse).</li>
+    <li><b>Datos iniciales:</b> por ejemplo, 2 estudiantes y 2 libros disponibles en <code>data.sql</code>, o con un <code>CommandLineRunner</code>.</li>
+    <li><b>Decisiones a reflejar en UML:</b> si el profesor agrega o renombra métodos (por ejemplo, <code>findAll</code>), actualicen el diagrama de clases y el de secuencia.</li>
+  </ul>
+  <div class="tbl"><table>
+    <thead><tr><th>Escenario</th><th>Petición de prueba</th><th>Resultado esperado</th><th>Regla</th></tr></thead>
+    <tbody>
+      <tr><td>Préstamo de libro disponible</td><td class="mono">POST {"estudianteId":1,"libroId":1}</td><td><span class="s201">201 Created</span> y el préstamo queda registrado; el libro 1 pasa a <code>disponible=false</code></td><td>R1, R2, R3</td></tr>
+      <tr><td>Libro ya prestado</td><td class="mono">repetir la misma petición</td><td><span class="s4xx">409 Conflict</span>, sin préstamo nuevo</td><td>R1, R4, R5</td></tr>
+      <tr><td>Estudiante inexistente</td><td class="mono">POST {"estudianteId":99,"libroId":2}</td><td><span class="s4xx">404 Not Found</span></td><td>R4</td></tr>
+      <tr><td>Libro inexistente</td><td class="mono">POST {"estudianteId":1,"libroId":99}</td><td><span class="s4xx">404 Not Found</span></td><td>R4</td></tr>
+      <tr><td>Consulta de préstamos</td><td class="mono">GET /api/prestamos</td><td><span class="s200">200 OK</span> con los registros</td><td>R2</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ACTIVIDAD 7 -->
+<section>
+  <div class="sechead"><h2>Actividad 7 · Revisión y defensa</h2><span class="t">15 min</span></div>
+  <div class="qa">
+    <div><h3>¿Qué responsabilidades cambiaron del modelo inicial al modelo por capas?</h3>
+      <p><code>GestorPrestamos</code> hacía tres trabajos y desaparece. Guardar colecciones pasó a los tres repositorios. Coordinar el caso de uso pasó a <code>PrestamoService</code>. La entrada y salida HTTP, que antes no existía, quedó en <code>PrestamoController</code>. Cambiar el estado del libro sigue en <code>Libro.marcarPrestado()</code>, ahora con validación. Se eliminaron los setters de colecciones y el <code>id</code> del constructor de <code>Prestamo</code>, porque lo asigna la base de datos.</p></div>
+    <div><h3>¿Qué patrón GRASP se reconoce en la coordinación? ¿Por qué un controlador GRASP no es necesariamente un @RestController?</h3>
+      <p>El patrón <b>Controlador</b> (de caso de uso) está en <code>PrestamoService</code>: es el primer objeto fuera de la interfaz que recibe la operación del sistema <code>registrarPrestamo</code> y la coordina. El <code>@RestController</code> pertenece a la capa de presentación. Solo traduce HTTP, y si mañana la petición llega por consola o por mensajería, el controlador GRASP sigue siendo el mismo servicio. También aparecen Experto en información (<code>Libro</code>), Creador (el servicio crea <code>Prestamo</code>), Bajo acoplamiento e Indirección (los repositorios).</p></div>
+    <div><h3>¿Dónde se ubica la regla de disponibilidad y por qué?</h3>
+      <p>En la capa de negocio. <code>PrestamoService</code> la hace cumplir dentro de la transacción, y <code>Libro</code> la protege con <code>isDisponible()</code> y <code>marcarPrestado()</code>, que lanza una excepción si el libro ya está prestado. No va en el controller, porque cualquier otra entrada podría saltársela. Tampoco va en el repositorio, que solo persiste datos. Así la regla se cumple aunque cambie la forma de entrada.</p></div>
+    <div><h3>¿Qué relaciones UML conservaron y cuáles modificaron?</h3>
+      <p><b>Conservadas:</b> Prestamo–Estudiante y Prestamo–Libro como asociaciones 0..* a 1, sin composición. <b>Modificadas:</b> se volvieron navegables solo desde <code>Prestamo</code>. Las tres asociaciones de <code>GestorPrestamos</code> con 0..* se eliminaron y su lugar lo ocupan asociaciones 1 a 1 hacia los repositorios. <b>Nuevas:</b> generalización de interfaces hacia <code>JpaRepository</code> y dependencias «use», «create» y «throw» para DTO, creación y excepciones.</p></div>
+    <div><h3>¿Cómo se comprueba la trazabilidad requisito → clase → operación → prueba?</h3>
+      <p>Con una matriz como esta. Cada fila debe tener una prueba que pase.</p></div>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Req.</th><th>Clase</th><th>Operación</th><th>Prueba</th></tr></thead>
+    <tbody>
+      <tr><td>R1</td><td class="cls">Libro, PrestamoService</td><td>isDisponible(), marcarPrestado()</td><td>Libro ya prestado → 409</td></tr>
+      <tr><td>R2</td><td class="cls">Prestamo, PrestamoRepository</td><td>Prestamo(estudiante, libro, fecha), save()</td><td>Préstamo exitoso → 201; GET → 200</td></tr>
+      <tr><td>R3</td><td class="cls">Libro, LibroRepository</td><td>marcarPrestado(), save()</td><td>Después del 201, el libro tiene disponible=false</td></tr>
+      <tr><td>R4</td><td class="cls">PrestamoRequest, PrestamoService</td><td>@Valid, findById(), @Transactional</td><td>404 y 409 sin préstamo creado</td></tr>
+      <tr><td>R5</td><td class="cls">Prestamo, PrestamoRepository</td><td>estaActivo(), existsByLibroIdAndFechaDevolucionIsNull()</td><td>Segundo préstamo del mismo libro → 409</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- DECISIONES -->
+<section>
+  <div class="sechead"><h2>Decisiones de diseño</h2><span class="t">entregable · máximo una página</span></div>
+  <ol>
+    <li><b>Tres capas con dependencia en un solo sentido</b> (Controller → Service → Repository). Cada capa cambia por una sola razón (HTTP, reglas o persistencia), lo que da alta cohesión y bajo acoplamiento.</li>
+    <li><b>Se elimina GestorPrestamos.</b> Era un objeto Dios con listas en memoria. Sus responsabilidades se reparten entre el servicio y los repositorios.</li>
+    <li><b>El servicio es el Controlador GRASP</b> del caso de uso y es <code>@Transactional</code>, para que el cambio de disponibilidad y el alta del préstamo sean atómicos (R3 con R2 y R4).</li>
+    <li><b>La regla de disponibilidad vive en el dominio.</b> <code>Libro.marcarPrestado()</code> valida antes de cambiar el estado (Experto en información) y se retira <code>setDisponible()</code> como vía pública.</li>
+    <li><b>Los DTO separan la API de las entidades.</b> <code>PrestamoRequest</code> solo trae ids validados y <code>PrestamoResponse</code> evita exponer la entidad JPA.</li>
+    <li><b>Errores explícitos.</b> Hay dos excepciones de negocio que un <code>@RestControllerAdvice</code> traduce a 404 y 409, así el controller no tiene condicionales de negocio.</li>
+    <li><b>Asociaciones sin composición</b> entre entidades, porque sus ciclos de vida son independientes. El préstamo activo se reconoce por <code>fechaDevolucion == null</code> (R5).</li>
+    <li><b>Repositorios como interfaces</b> que extienden <code>JpaRepository</code>, sin realización propia. La concurrencia (dos préstamos simultáneos) se deja anotada: se resolvería con bloqueo optimista (<code>@Version</code>), pero no se profundiza.</li>
+  </ol>
+</section>
+
+<!-- VISUAL PARADIGM -->
+<section>
+  <div class="sechead"><h2>Cómo llevarlo a Visual Paradigm</h2></div>
+  <ol>
+    <li>Abre Visual Paradigm y crea un proyecto, por ejemplo <code>SmartLibrary.vpp</code>.</li>
+    <li>Importa cada archivo <code>.puml</code> de la carpeta <code>Taller7_SmartLibrary</code> desde el menú de importación de PlantUML. En VP Online también puedes pegar el texto en un diagrama PlantUML.</li>
+    <li>Si tu edición no trae importador de PlantUML, dibújalos a mano copiando esta página: clases, atributos y operaciones tal cual, con flecha sólida para asociación, punteada para dependencia y triángulo para generalización.</li>
+    <li>Reacomoda las clases por capas: controller arriba, service al centro, repository y model abajo. Exporta cada diagrama como PNG para el entregable.</li>
+  </ol>
+</section>
+</div>
+
+<script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs"; mermaid.initialize({startOnLoad:true});</script>
+</body>
+</html>

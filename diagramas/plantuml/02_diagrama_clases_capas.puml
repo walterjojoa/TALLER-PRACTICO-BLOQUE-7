@@ -1,0 +1,126 @@
+@startuml 02_Diagrama_Clases_Por_Capas
+' Actividad 3 - Modelo por capas: Controller -> Service -> Repository
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam packageStyle rectangle
+
+package "controller" {
+  class PrestamoController <<RestController>> {
+    - prestamoService : PrestamoService
+    + PrestamoController(prestamoService : PrestamoService)
+    + registrar(request : PrestamoRequest) : ResponseEntity<PrestamoResponse>
+    + listar() : ResponseEntity<List<PrestamoResponse>>
+  }
+  class ManejadorExcepciones <<RestControllerAdvice>> {
+    + manejarNoEncontrado(ex : RecursoNoEncontradoException) : ResponseEntity<String>
+    + manejarNoDisponible(ex : LibroNoDisponibleException) : ResponseEntity<String>
+  }
+}
+
+package "dto" {
+  class PrestamoRequest <<record>> {
+    + estudianteId : Long {NotNull}
+    + libroId : Long {NotNull}
+  }
+  class PrestamoResponse <<record>> {
+    + id : Long
+    + estudianteNombre : String
+    + libroTitulo : String
+    + fechaPrestamo : LocalDate
+    + {static} desde(p : Prestamo) : PrestamoResponse
+  }
+}
+
+package "service" {
+  class PrestamoService <<Service>> {
+    - estudianteRepository : EstudianteRepository
+    - libroRepository : LibroRepository
+    - prestamoRepository : PrestamoRepository
+    + registrarPrestamo(request : PrestamoRequest) : Prestamo
+    + listarPrestamos() : List<Prestamo>
+  }
+  class RecursoNoEncontradoException <<exception>>
+  class LibroNoDisponibleException <<exception>>
+}
+
+package "repository" {
+  interface "JpaRepository<T, ID>" as JpaRepository <<Spring Data>> {
+    + findById(id : ID) : Optional<T>
+    + findAll() : List<T>
+    + save(entidad : T) : T
+  }
+  interface EstudianteRepository
+  interface LibroRepository
+  interface PrestamoRepository {
+    + existsByLibroIdAndFechaDevolucionIsNull(libroId : Long) : boolean
+  }
+}
+
+package "model" {
+  class Estudiante <<Entity>> {
+    - id : Long
+    - nombre : String
+    - correo : String
+    + getId() : Long
+    + getNombre() : String
+  }
+  class Libro <<Entity>> {
+    - id : Long
+    - titulo : String
+    - disponible : boolean
+    + getId() : Long
+    + getTitulo() : String
+    + isDisponible() : boolean
+    + marcarPrestado() : void
+  }
+  class Prestamo <<Entity>> {
+    - id : Long
+    - fechaPrestamo : LocalDate
+    - fechaDevolucion : LocalDate [0..1]
+    - estudiante : Estudiante
+    - libro : Libro
+    + Prestamo(estudiante : Estudiante, libro : Libro, fecha : LocalDate)
+    + getId() : Long
+    + estaActivo() : boolean
+  }
+}
+
+' Relaciones estructurales entre capas (atributo inyectado por constructor)
+PrestamoController "1" --> "1" PrestamoService
+PrestamoService "1" --> "1" EstudianteRepository
+PrestamoService "1" --> "1" LibroRepository
+PrestamoService "1" --> "1" PrestamoRepository
+
+' Generalizacion entre interfaces (Spring Data genera la implementacion en tiempo de ejecucion)
+JpaRepository <|-- EstudianteRepository : T=Estudiante
+JpaRepository <|-- LibroRepository : T=Libro
+JpaRepository <|-- PrestamoRepository : T=Prestamo
+
+' Asociaciones del dominio (navegables desde Prestamo, @ManyToOne)
+Prestamo "0..*" --> "1" Estudiante : estudiante
+Prestamo "0..*" --> "1" Libro : libro
+
+' Dependencias (uso puntual: parametro, retorno, creacion, excepcion)
+PrestamoController ..> PrestamoRequest : <<use>>
+PrestamoController ..> PrestamoResponse : <<create>>
+PrestamoService ..> PrestamoRequest : <<use>>
+PrestamoService ..> Prestamo : <<create>>
+PrestamoService ..> RecursoNoEncontradoException : <<throw>>
+PrestamoService ..> LibroNoDisponibleException : <<throw>>
+PrestamoResponse ..> Prestamo : <<use>>
+ManejadorExcepciones ..> RecursoNoEncontradoException : <<use>>
+ManejadorExcepciones ..> LibroNoDisponibleException : <<use>>
+Libro ..> LibroNoDisponibleException : <<throw>>
+
+note right of PrestamoService
+  Controlador GRASP del caso de uso
+  "Registrar prestamo". Aplica R1, R4, R5
+  y es @Transactional (R2 + R3 atomicos).
+end note
+
+note bottom of Libro
+  Experto en informacion: marcarPrestado()
+  lanza LibroNoDisponibleException si
+  disponible == false (protege R1 y R3).
+end note
+@enduml

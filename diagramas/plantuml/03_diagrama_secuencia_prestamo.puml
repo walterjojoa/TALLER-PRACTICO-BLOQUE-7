@@ -1,0 +1,60 @@
+@startuml 03_Secuencia_Registrar_Prestamo
+' Actividad 4 - POST /api/prestamos
+skinparam shadowing false
+autonumber
+actor Usuario
+participant ":PrestamoController" as C
+participant ":PrestamoService" as S
+participant ":EstudianteRepository" as ER
+participant ":LibroRepository" as LR
+participant ":PrestamoRepository" as PR
+participant "libro:Libro" as L
+
+Usuario -> C : POST /api/prestamos {estudianteId, libroId}
+activate C
+note right of C : @Valid PrestamoRequest\n(campos nulos -> 400, R4)
+C -> S : registrarPrestamo(request)
+activate S
+note right of S : inicia @Transactional
+S -> ER : findById(estudianteId)
+activate ER
+ER --> S : Optional<Estudiante>
+deactivate ER
+note right of S : vacio -> RecursoNoEncontradoException (404)
+S -> LR : findById(libroId)
+activate LR
+LR --> S : Optional<Libro>
+deactivate LR
+note right of S : vacio -> RecursoNoEncontradoException (404)
+S -> L : isDisponible()
+activate L
+L --> S : disponible
+deactivate L
+
+alt disponible == true [prestamo exitoso]
+  S -> L : marcarPrestado()
+  activate L
+  L --> S
+  deactivate L
+  create participant "p:Prestamo" as P
+  S -> P : <<create>> Prestamo(estudiante, libro, LocalDate.now())
+  S -> LR : save(libro)
+  activate LR
+  LR --> S : libro
+  deactivate LR
+  S -> PR : save(p)
+  activate PR
+  PR --> S : p (con id)
+  deactivate PR
+  note right of S : commit de la transaccion
+  S --> C : p
+  C -> C : PrestamoResponse.desde(p)
+  C --> Usuario : 201 Created + PrestamoResponse
+else disponible == false [libro no disponible]
+  S --> C : throw LibroNoDisponibleException
+  note right of S : rollback: no se crea prestamo (R1, R4)
+  C --> Usuario : 409 Conflict (ManejadorExcepciones)
+end
+deactivate S
+deactivate C
+@enduml

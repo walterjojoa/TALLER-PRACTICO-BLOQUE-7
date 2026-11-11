@@ -1,0 +1,80 @@
+@startuml 01_Modelo_Inicial_Anotado
+' Actividad 1 - Modelo inicial con observaciones
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+left to right direction
+
+class GestorPrestamos {
+  - estudiantes : List<Estudiante>
+  - libros : List<Libro>
+  - prestamos : List<Prestamo>
+  + GestorPrestamos()
+  + registrarPrestamo(e : Estudiante, l : Libro) : Prestamo
+  + getEstudiantes() : List<Estudiante>
+  + setEstudiantes(lista) : void
+  + getLibros() : List<Libro>
+  + setLibros(lista) : void
+  + getPrestamos() : List<Prestamo>
+  + setPrestamos(lista) : void
+}
+class Estudiante {
+  - id : Long
+  - nombre : String
+  - correo : String
+  + Estudiante(id, nombre, correo)
+  + getId() : Long
+  + getNombre() : String
+  + getCorreo() : String
+}
+class Libro {
+  - id : Long
+  - titulo : String
+  - disponible : boolean
+  + Libro(id, titulo, disponible)
+  + isDisponible() : boolean
+  + setDisponible(valor : boolean) : void
+  + marcarPrestado() : void
+}
+class Prestamo {
+  - id : Long
+  - fechaPrestamo : LocalDate
+  - fechaDevolucion : LocalDate [0..1]
+  - estudiante : Estudiante
+  - libro : Libro
+  + Prestamo(id, fecha, estudiante, libro)
+  + getEstudiante() : Estudiante
+  + getLibro() : Libro
+}
+
+GestorPrestamos "1" -- "0..*" Estudiante : registra
+GestorPrestamos "1" -- "0..*" Libro : administra
+GestorPrestamos "1" -- "0..*" Prestamo : gestiona
+Estudiante "1" -- "0..*" Prestamo : historial
+Libro "1" -- "0..*" Prestamo : historial
+
+note top of GestorPrestamos
+  OBS 1: Baja cohesion. Mezcla almacenamiento
+  (listas en memoria) y logica del caso de uso,
+  y no sabe recibir HTTP. Es un "objeto Dios".
+  OBS 2: Las listas en memoria se pierden:
+  no hay persistencia (falta Repository).
+  OBS 3: setEstudiantes/setLibros/setPrestamos
+  rompen el encapsulamiento.
+end note
+
+note bottom of Libro
+  OBS 4: setDisponible() publico permite
+  saltarse R1. marcarPrestado() debe validar
+  la disponibilidad (Experto en informacion).
+end note
+
+note bottom of Prestamo
+  OBS 5: fechaDevolucion [0..1] = null indica
+  prestamo ACTIVO (R5). Falta estaActivo().
+  OBS 6: id y fecha no deben venir del cliente:
+  los asigna el sistema (BD / LocalDate.now()).
+end note
+
+note "OBS 7: Son ASOCIACIONES, no composiciones.\nBorrar un Prestamo no borra al Libro ni al\nEstudiante: ambos existen antes y despues\ndel prestamo (ciclos de vida independientes)." as N1
+N1 .. Prestamo
+@enduml
