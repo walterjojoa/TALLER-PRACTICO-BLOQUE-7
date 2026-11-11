@@ -1,8 +1,8 @@
 package com.smartlibrary.dto;
 
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
 
 public record PrestamoRequest(
-        @NotNull(message = "estudianteId es obligatorio") Long estudianteId,
-        @NotNull(message = "libroId es obligatorio") Long libroId) {
+        @NotBlank(message = "estudianteId es obligatorio") String estudianteId,
+        @NotBlank(message = "libroId es obligatorio") String libroId) {
 }

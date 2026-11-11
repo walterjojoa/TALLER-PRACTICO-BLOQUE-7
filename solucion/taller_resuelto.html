@@ -143,7 +143,7 @@ note for Prestamo "OBS 5: fechaDevolucion null = préstamo activo (R5)"
       <tr><td>Validar disponibilidad</td><td class="cls">PrestamoService + Libro</td><td>Es una regla de negocio (R1, R5), así que va en la capa de servicio, que coordina el caso de uso. El dato y la verificación pertenecen a <code>Libro.isDisponible()</code> (Experto en información).</td></tr>
       <tr><td>Crear el préstamo</td><td class="cls">PrestamoService</td><td>Creador (GRASP): el servicio tiene los datos de inicialización (estudiante, libro y fecha actual) y hace <code>new Prestamo(...)</code> (R2).</td></tr>
       <tr><td>Cambiar disponibilidad</td><td class="cls">Libro.marcarPrestado()</td><td>Experto en información: el libro conoce su estado y lo protege. El servicio solo invoca el método (R3).</td></tr>
-      <tr><td>Guardar cambios</td><td class="cls">PrestamoRepository<br>LibroRepository</td><td>Persistencia con <code>save()</code>. El servicio marca el método con <code>@Transactional</code> para que libro y préstamo se guarden juntos o ninguno se guarde (R4).</td></tr>
+      <tr><td>Guardar cambios</td><td class="cls">PrestamoRepository<br>LibroRepository</td><td>Persistencia con <code>save()</code>. El servicio valida todo antes de escribir (R4) y guarda primero el préstamo y luego el libro.</td></tr>
       <tr><td>Devolver respuesta HTTP</td><td class="cls">PrestamoController<br>ManejadorExcepciones</td><td>Construye <code>201 Created</code> con <code>PrestamoResponse</code>. El <code>@RestControllerAdvice</code> traduce las excepciones a 404 y 409.</td></tr>
     </tbody>
   </table></div>
@@ -168,12 +168,12 @@ class ManejadorExcepciones {
 }
 class PrestamoRequest {
   <<record DTO>>
-  +estudianteId: Long NotNull
-  +libroId: Long NotNull
+  +estudianteId: String NotBlank
+  +libroId: String NotBlank
 }
 class PrestamoResponse {
   <<record DTO>>
-  +id: Long
+  +id: String
   +estudianteNombre: String
   +libroTitulo: String
   +fechaPrestamo: LocalDate
@@ -193,7 +193,7 @@ class RecursoNoEncontradoException {
 class LibroNoDisponibleException {
   <<exception>>
 }
-class JpaRepository~T,ID~ {
+class MongoRepository~T,ID~ {
   <<interface>>
   +findById(id: ID) Optional~T~
   +findAll() List~T~
@@ -207,26 +207,26 @@ class LibroRepository {
 }
 class PrestamoRepository {
   <<interface>>
-  +existsByLibroIdAndFechaDevolucionIsNull(libroId: Long) boolean
+  +existsByLibroIdAndFechaDevolucionIsNull(libroId: String) boolean
 }
 class Estudiante {
-  <<Entity>>
-  -id: Long
+  <<Document>>
+  -id: String
   -nombre: String
   -correo: String
   +getNombre() String
 }
 class Libro {
-  <<Entity>>
-  -id: Long
+  <<Document>>
+  -id: String
   -titulo: String
   -disponible: boolean
   +isDisponible() boolean
   +marcarPrestado() void
 }
 class Prestamo {
-  <<Entity>>
-  -id: Long
+  <<Document>>
+  -id: String
   -fechaPrestamo: LocalDate
   -fechaDevolucion: LocalDate [0..1]
   -estudiante: Estudiante
@@ -238,9 +238,9 @@ PrestamoController "1" --> "1" PrestamoService
 PrestamoService "1" --> "1" EstudianteRepository
 PrestamoService "1" --> "1" LibroRepository
 PrestamoService "1" --> "1" PrestamoRepository
-JpaRepository <|-- EstudianteRepository
-JpaRepository <|-- LibroRepository
-JpaRepository <|-- PrestamoRepository
+MongoRepository <|-- EstudianteRepository
+MongoRepository <|-- LibroRepository
+MongoRepository <|-- PrestamoRepository
 Prestamo "0..*" --> "1" Estudiante : estudiante
 Prestamo "0..*" --> "1" Libro : libro
 PrestamoController ..> PrestamoRequest : «use»
@@ -257,8 +257,8 @@ ManejadorExcepciones ..> LibroNoDisponibleException : «use»
   <h3>Cómo se tipificó cada relación</h3>
   <div class="legend">
     <div><span class="k">Controller → Service → Repository</span><span class="v">Asociación dirigida 1 a 1. Cada capa guarda la siguiente como atributo inyectado por constructor, que es una referencia mantenida. La dirección nunca se invierte, y el Controller no toca ningún Repository.</span></div>
-    <div><span class="k">Prestamo → Estudiante / Libro</span><span class="v">Asociación 0..* a 1, navegable desde Prestamo (<code>@ManyToOne</code>). Se conserva del modelo inicial. Libro y Estudiante no guardan la lista de préstamos.</span></div>
-    <div><span class="k">Repository ◁— JpaRepository</span><span class="v">Generalización entre interfaces (<code>extends</code>). No se dibuja realización porque la implementación la genera Spring Data en tiempo de ejecución: no existe una clase nuestra que la implemente.</span></div>
+    <div><span class="k">Prestamo → Estudiante / Libro</span><span class="v">Asociación 0..* a 1, navegable desde Prestamo. En MongoDB se guarda como referencia (<code>@DocumentReference</code>, solo el id), no como copia embebida. Se conserva del modelo inicial. Libro y Estudiante no guardan la lista de préstamos.</span></div>
+    <div><span class="k">Repository ◁— MongoRepository</span><span class="v">Generalización entre interfaces (<code>extends</code>). No se dibuja realización porque la implementación la genera Spring Data en tiempo de ejecución: no existe una clase nuestra que la implemente.</span></div>
     <div><span class="k">Línea punteada «use» / «create» / «throw»</span><span class="v">Dependencias de uso puntual: parámetros (Request), objetos que se crean (Prestamo, Response) y excepciones. No hay atributo, así que no son asociaciones.</span></div>
     <div><span class="k">Sin rombos</span><span class="v">Se mantiene la decisión del modelo inicial: no hay ciclo de vida todo-parte. <code>GestorPrestamos</code> desaparece y sus listas pasan a los repositorios.</span></div>
     <div><span class="k">Interfaces vs clases</span><span class="v">Interfaces: los 4 repositorios. Clases: el controller, el servicio, las entidades, los DTO (records) y las excepciones.</span></div>
@@ -281,10 +281,10 @@ participant L as libro:Libro
 participant P as p:Prestamo
 U->>C: POST /api/prestamos {estudianteId, libroId}
 activate C
-Note right of C: @Valid PrestamoRequest (nulos = 400, R4)
+Note right of C: @Valid PrestamoRequest (vacíos = 400, R4)
 C->>S: registrarPrestamo(request)
 activate S
-Note right of S: inicia @Transactional
+Note right of S: valida todo antes de escribir
 S->>ER: findById(estudianteId)
 ER-->>S: Optional Estudiante (vacío = 404)
 S->>LR: findById(libroId)
@@ -294,17 +294,17 @@ L-->>S: disponible
 alt disponible == true · préstamo exitoso
   S->>L: marcarPrestado()
   S->>P: «create» Prestamo(estudiante, libro, LocalDate.now())
-  S->>LR: save(libro)
-  LR-->>S: libro
   S->>PR: save(p)
   PR-->>S: p con id
-  Note right of S: commit
+  S->>LR: save(libro)
+  LR-->>S: libro
+  Note right of S: MongoDB guarda primero el préstamo
   S-->>C: p
   C->>C: PrestamoResponse.desde(p)
   C-->>U: 201 Created + PrestamoResponse
 else disponible == false · libro no disponible
   S--)C: throw LibroNoDisponibleException
-  Note right of S: rollback, no se crea préstamo (R1, R4)
+  Note right of S: no se escribe nada (R1, R4)
   C-->>U: 409 Conflict (vía ManejadorExcepciones)
 end
 deactivate S
@@ -319,7 +319,7 @@ deactivate C
   <div class="sechead"><h2>Actividades 5 y 6 · Preparación y pruebas</h2><span class="t">70 min · en clase con el profesor</span></div>
   <p>El código lo escribe el profesor. Esto es lo que deben verificar para que el proyecto coincida con el diseño.</p>
   <ul>
-    <li><b>Spring Initializr:</b> Java 21, Maven, Spring Web, Spring Data JPA, Validation y H2.</li>
+    <li><b>Spring Initializr:</b> Java 21, Maven, Spring Web, Spring Data MongoDB y Validation (como en la clase del profesor).</li>
     <li><b>Paquetes:</b> <code>controller</code> (PrestamoController, ManejadorExcepciones), <code>service</code> (PrestamoService y excepciones), <code>repository</code> (3 interfaces), <code>model</code> (Estudiante, Libro, Prestamo) y <code>dto</code> (PrestamoRequest, PrestamoResponse).</li>
     <li><b>Datos iniciales:</b> por ejemplo, 2 estudiantes y 2 libros disponibles en <code>data.sql</code>, o con un <code>CommandLineRunner</code>.</li>
     <li><b>Decisiones a reflejar en UML:</b> si el profesor agrega o renombra métodos (por ejemplo, <code>findAll</code>), actualicen el diagrama de clases y el de secuencia.</li>
@@ -347,7 +347,7 @@ deactivate C
     <div><h3>¿Dónde se ubica la regla de disponibilidad y por qué?</h3>
       <p>En la capa de negocio. <code>PrestamoService</code> la hace cumplir dentro de la transacción, y <code>Libro</code> la protege con <code>isDisponible()</code> y <code>marcarPrestado()</code>, que lanza una excepción si el libro ya está prestado. No va en el controller, porque cualquier otra entrada podría saltársela. Tampoco va en el repositorio, que solo persiste datos. Así la regla se cumple aunque cambie la forma de entrada.</p></div>
     <div><h3>¿Qué relaciones UML conservaron y cuáles modificaron?</h3>
-      <p><b>Conservadas:</b> Prestamo–Estudiante y Prestamo–Libro como asociaciones 0..* a 1, sin composición. <b>Modificadas:</b> se volvieron navegables solo desde <code>Prestamo</code>. Las tres asociaciones de <code>GestorPrestamos</code> con 0..* se eliminaron y su lugar lo ocupan asociaciones 1 a 1 hacia los repositorios. <b>Nuevas:</b> generalización de interfaces hacia <code>JpaRepository</code> y dependencias «use», «create» y «throw» para DTO, creación y excepciones.</p></div>
+      <p><b>Conservadas:</b> Prestamo–Estudiante y Prestamo–Libro como asociaciones 0..* a 1, sin composición. <b>Modificadas:</b> se volvieron navegables solo desde <code>Prestamo</code>. Las tres asociaciones de <code>GestorPrestamos</code> con 0..* se eliminaron y su lugar lo ocupan asociaciones 1 a 1 hacia los repositorios. <b>Nuevas:</b> generalización de interfaces hacia <code>MongoRepository</code> y dependencias «use», «create» y «throw» para DTO, creación y excepciones.</p></div>
     <div><h3>¿Cómo se comprueba la trazabilidad requisito → clase → operación → prueba?</h3>
       <p>Con una matriz como esta. Cada fila debe tener una prueba que pase.</p></div>
   </div>
@@ -357,7 +357,7 @@ deactivate C
       <tr><td>R1</td><td class="cls">Libro, PrestamoService</td><td>isDisponible(), marcarPrestado()</td><td>Libro ya prestado → 409</td></tr>
       <tr><td>R2</td><td class="cls">Prestamo, PrestamoRepository</td><td>Prestamo(estudiante, libro, fecha), save()</td><td>Préstamo exitoso → 201; GET → 200</td></tr>
       <tr><td>R3</td><td class="cls">Libro, LibroRepository</td><td>marcarPrestado(), save()</td><td>Después del 201, el libro tiene disponible=false</td></tr>
-      <tr><td>R4</td><td class="cls">PrestamoRequest, PrestamoService</td><td>@Valid, findById(), @Transactional</td><td>404 y 409 sin préstamo creado</td></tr>
+      <tr><td>R4</td><td class="cls">PrestamoRequest, PrestamoService</td><td>@Valid, findById(), validar antes de escribir</td><td>404 y 409 sin préstamo creado</td></tr>
       <tr><td>R5</td><td class="cls">Prestamo, PrestamoRepository</td><td>estaActivo(), existsByLibroIdAndFechaDevolucionIsNull()</td><td>Segundo préstamo del mismo libro → 409</td></tr>
     </tbody>
   </table></div>
@@ -369,12 +369,12 @@ deactivate C
   <ol>
     <li><b>Tres capas con dependencia en un solo sentido</b> (Controller → Service → Repository). Cada capa cambia por una sola razón (HTTP, reglas o persistencia), lo que da alta cohesión y bajo acoplamiento.</li>
     <li><b>Se elimina GestorPrestamos.</b> Era un objeto Dios con listas en memoria. Sus responsabilidades se reparten entre el servicio y los repositorios.</li>
-    <li><b>El servicio es el Controlador GRASP</b> del caso de uso y es <code>@Transactional</code>, para que el cambio de disponibilidad y el alta del préstamo sean atómicos (R3 con R2 y R4).</li>
+    <li><b>El servicio es el Controlador GRASP</b> del caso de uso. Valida todo antes de escribir (R4). MongoDB es atómico por documento y sin replica set no hay transacciones entre documentos, así que se guarda primero el préstamo y luego el libro: si lo segundo fallara, la consulta de R5 sigue bloqueando un segundo préstamo.</li>
     <li><b>La regla de disponibilidad vive en el dominio.</b> <code>Libro.marcarPrestado()</code> valida antes de cambiar el estado (Experto en información) y se retira <code>setDisponible()</code> como vía pública.</li>
     <li><b>Los DTO separan la API de las entidades.</b> <code>PrestamoRequest</code> solo trae ids validados y <code>PrestamoResponse</code> evita exponer la entidad JPA.</li>
     <li><b>Errores explícitos.</b> Hay dos excepciones de negocio que un <code>@RestControllerAdvice</code> traduce a 404 y 409, así el controller no tiene condicionales de negocio.</li>
     <li><b>Asociaciones sin composición</b> entre entidades, porque sus ciclos de vida son independientes. El préstamo activo se reconoce por <code>fechaDevolucion == null</code> (R5).</li>
-    <li><b>Repositorios como interfaces</b> que extienden <code>JpaRepository</code>, sin realización propia. La concurrencia (dos préstamos simultáneos) se deja anotada: se resolvería con bloqueo optimista (<code>@Version</code>), pero no se profundiza.</li>
+    <li><b>Repositorios como interfaces</b> que extienden <code>MongoRepository</code>, sin realización propia. La concurrencia (dos préstamos simultáneos) se deja anotada: se resolvería con bloqueo optimista (<code>@Version</code>), pero no se profundiza.</li>
   </ol>
 </section>
 

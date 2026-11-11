@@ -1,31 +1,29 @@
 package com.smartlibrary.model;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 
-@Entity
+@Document(collection = "estudiantes")
 public class Estudiante {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private String id;
 
     private String nombre;
 
     private String correo;
 
     protected Estudiante() {
-        // requerido por JPA
+        // requerido por Spring Data
     }
 
-    public Estudiante(String nombre, String correo) {
+    public Estudiante(String id, String nombre, String correo) {
+        this.id = id;
         this.nombre = nombre;
         this.correo = correo;
     }
 
-    public Long getId() {
+    public String getId() {
         return id;
     }
 

@@ -5,7 +5,7 @@ import java.time.LocalDate;
 import com.smartlibrary.model.Prestamo;
 
 public record PrestamoResponse(
-        Long id,
+        String id,
         String estudianteNombre,
         String libroTitulo,
         LocalDate fechaPrestamo) {

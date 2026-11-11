@@ -1,33 +1,31 @@
 package com.smartlibrary.model;
 
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+
 import com.smartlibrary.service.LibroNoDisponibleException;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-
-@Entity
+@Document(collection = "libros")
 public class Libro {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private String id;
 
     private String titulo;
 
     private boolean disponible;
 
     protected Libro() {
-        // requerido por JPA
+        // requerido por Spring Data
     }
 
-    public Libro(String titulo, boolean disponible) {
+    public Libro(String id, String titulo, boolean disponible) {
+        this.id = id;
         this.titulo = titulo;
         this.disponible = disponible;
     }
 
-    public Long getId() {
+    public String getId() {
         return id;
     }
 

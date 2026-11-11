@@ -4,7 +4,6 @@ import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import com.smartlibrary.dto.PrestamoRequest;
 import com.smartlibrary.model.Estudiante;
@@ -34,10 +33,14 @@ public class PrestamoService {
     }
 
     /**
-     * Aplica R1 a R5. La transaccion garantiza que el cambio de disponibilidad (R3)
-     * y el registro del prestamo (R2) ocurran juntos o no ocurran (R4).
+     * Aplica R1 a R5. Todas las validaciones se hacen ANTES de escribir,
+     * asi una solicitud invalida nunca crea prestamo (R4).
+     *
+     * MongoDB garantiza atomicidad por documento. Sin un replica set no hay
+     * transacciones entre documentos, por eso el prestamo se guarda primero:
+     * si fallara el guardado del libro, el prestamo activo ya registrado sigue
+     * bloqueando nuevos prestamos del mismo libro gracias a la consulta de R5.
      */
-    @Transactional
     public Prestamo registrarPrestamo(PrestamoRequest request) {
         Estudiante estudiante = estudianteRepository.findById(request.estudianteId())
                 .orElseThrow(() -> new RecursoNoEncontradoException("Estudiante", request.estudianteId()));
@@ -49,12 +52,11 @@ public class PrestamoService {
         }
 
         libro.marcarPrestado();
-        Prestamo prestamo = new Prestamo(estudiante, libro, LocalDate.now());
+        Prestamo prestamo = prestamoRepository.save(new Prestamo(estudiante, libro, LocalDate.now()));
         libroRepository.save(libro);
-        return prestamoRepository.save(prestamo);
+        return prestamo;
     }
 
-    @Transactional(readOnly = true)
     public List<Prestamo> listarPrestamos() {
         return prestamoRepository.findAll();
     }

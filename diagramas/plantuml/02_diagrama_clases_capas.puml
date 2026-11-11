@@ -19,11 +19,11 @@ package "controller" {
 
 package "dto" {
   class PrestamoRequest <<record>> {
-    + estudianteId : Long {NotNull}
-    + libroId : Long {NotNull}
+    + estudianteId : String {NotBlank}
+    + libroId : String {NotBlank}
   }
   class PrestamoResponse <<record>> {
-    + id : Long
+    + id : String
     + estudianteNombre : String
     + libroTitulo : String
     + fechaPrestamo : LocalDate
@@ -44,7 +44,7 @@ package "service" {
 }
 
 package "repository" {
-  interface "JpaRepository<T, ID>" as JpaRepository <<Spring Data>> {
+  interface "MongoRepository<T, ID>" as MongoRepository <<Spring Data>> {
     + findById(id : ID) : Optional<T>
     + findAll() : List<T>
     + save(entidad : T) : T
@@ -52,35 +52,35 @@ package "repository" {
   interface EstudianteRepository
   interface LibroRepository
   interface PrestamoRepository {
-    + existsByLibroIdAndFechaDevolucionIsNull(libroId : Long) : boolean
+    + existsByLibroIdAndFechaDevolucionIsNull(libroId : String) : boolean
   }
 }
 
 package "model" {
-  class Estudiante <<Entity>> {
-    - id : Long
+  class Estudiante <<Document>> {
+    - id : String
     - nombre : String
     - correo : String
-    + getId() : Long
+    + getId() : String
     + getNombre() : String
   }
-  class Libro <<Entity>> {
-    - id : Long
+  class Libro <<Document>> {
+    - id : String
     - titulo : String
     - disponible : boolean
-    + getId() : Long
+    + getId() : String
     + getTitulo() : String
     + isDisponible() : boolean
     + marcarPrestado() : void
   }
-  class Prestamo <<Entity>> {
-    - id : Long
+  class Prestamo <<Document>> {
+    - id : String
     - fechaPrestamo : LocalDate
     - fechaDevolucion : LocalDate [0..1]
     - estudiante : Estudiante
     - libro : Libro
     + Prestamo(estudiante : Estudiante, libro : Libro, fecha : LocalDate)
-    + getId() : Long
+    + getId() : String
     + estaActivo() : boolean
   }
 }
@@ -92,11 +92,11 @@ PrestamoService "1" --> "1" LibroRepository
 PrestamoService "1" --> "1" PrestamoRepository
 
 ' Generalizacion entre interfaces (Spring Data genera la implementacion en tiempo de ejecucion)
-JpaRepository <|-- EstudianteRepository : T=Estudiante
-JpaRepository <|-- LibroRepository : T=Libro
-JpaRepository <|-- PrestamoRepository : T=Prestamo
+MongoRepository <|-- EstudianteRepository : T=Estudiante
+MongoRepository <|-- LibroRepository : T=Libro
+MongoRepository <|-- PrestamoRepository : T=Prestamo
 
-' Asociaciones del dominio (navegables desde Prestamo, @ManyToOne)
+' Asociaciones del dominio (navegables desde Prestamo, @DocumentReference: se guardan los ids)
 Prestamo "0..*" --> "1" Estudiante : estudiante
 Prestamo "0..*" --> "1" Libro : libro
 
@@ -114,8 +114,9 @@ Libro ..> LibroNoDisponibleException : <<throw>>
 
 note right of PrestamoService
   Controlador GRASP del caso de uso
-  "Registrar prestamo". Aplica R1, R4, R5
-  y es @Transactional (R2 + R3 atomicos).
+  "Registrar prestamo". Valida todo antes
+  de escribir (R1, R4, R5). MongoDB es atomico
+  por documento: guarda primero el prestamo.
 end note
 
 note bottom of Libro

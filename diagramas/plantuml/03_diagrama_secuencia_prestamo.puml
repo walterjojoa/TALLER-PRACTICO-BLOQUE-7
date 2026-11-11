@@ -12,10 +12,10 @@ participant "libro:Libro" as L
 
 Usuario -> C : POST /api/prestamos {estudianteId, libroId}
 activate C
-note right of C : @Valid PrestamoRequest\n(campos nulos -> 400, R4)
+note right of C : @Valid PrestamoRequest\n(campos vacios -> 400, R4)
 C -> S : registrarPrestamo(request)
 activate S
-note right of S : inicia @Transactional
+note right of S : todas las validaciones van antes de escribir
 S -> ER : findById(estudianteId)
 activate ER
 ER --> S : Optional<Estudiante>
@@ -38,21 +38,21 @@ alt disponible == true [prestamo exitoso]
   deactivate L
   create participant "p:Prestamo" as P
   S -> P : <<create>> Prestamo(estudiante, libro, LocalDate.now())
-  S -> LR : save(libro)
-  activate LR
-  LR --> S : libro
-  deactivate LR
   S -> PR : save(p)
   activate PR
   PR --> S : p (con id)
   deactivate PR
-  note right of S : commit de la transaccion
+  S -> LR : save(libro)
+  activate LR
+  LR --> S : libro
+  deactivate LR
+  note right of S : MongoDB: primero el prestamo;\nla consulta de R5 evita dobles prestamos
   S --> C : p
   C -> C : PrestamoResponse.desde(p)
   C --> Usuario : 201 Created + PrestamoResponse
 else disponible == false [libro no disponible]
   S --> C : throw LibroNoDisponibleException
-  note right of S : rollback: no se crea prestamo (R1, R4)
+  note right of S : no se escribe nada (R1, R4)
   C --> Usuario : 409 Conflict (ManejadorExcepciones)
 end
 deactivate S
