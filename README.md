@@ -2,6 +2,8 @@
 
 **Diseño de Software · Cuarto semestre**
 
+**Integrantes:** Andrés Camilo Muñoz Bolaños · Walter René Jojoa
+
 Este taller rediseña el modelo de clases inicial de SmartLibrary (centrado en `GestorPrestamos`) en tres capas, **Controller → Service → Repository**, para una API REST con **Spring Boot y MongoDB**. El caso de uso que se resuelve es **Registrar préstamo** (`POST /api/prestamos`). También incluye la actividad de cierre del caso **Editorial** de la clase "De la Web a una API REST con Spring Boot y MongoDB".
 
 ## Entregables
