@@ -6,6 +6,8 @@ Este taller rediseña el modelo de clases inicial de SmartLibrary (centrado en `
 
 ## Entregables
 
+**Documento único de entrega:** [`entregables/Entrega_Taller7_SmartLibrary.pdf`](entregables/Entrega_Taller7_SmartLibrary.pdf) (15 páginas con los 6 entregables y el anexo Editorial).
+
 | # | Entregable pedido | Dónde está |
 |---|---|---|
 | 1 | Diagrama inicial anotado con observaciones | [Actividad 1](#actividad-1--modelo-inicial-anotado) · `diagramas/imagenes/01_Modelo_Inicial_Anotado.png` |
@@ -31,6 +33,7 @@ Los diagramas 1, 3 y 4 están en el proyecto de Visual Paradigm `diagramas/visua
 │   ├── pruebas_automaticas.txt              12 pruebas JUnit (12 de 12 pasan)
 │   └── pruebas_api.md                       Salida de probar-api.cmd contra MongoDB 9.0 instalado
 ├── entregables/
+│   ├── Entrega_Taller7_SmartLibrary.pdf     Documento único con todos los entregables
 │   ├── Decisiones_de_diseno.docx            Explicación de una página
 │   └── Decisiones_de_diseno.pdf
 ├── actividad-editorial/                     Caso Editorial: endpoints, responsabilidades, reto DELETE y diagramas
