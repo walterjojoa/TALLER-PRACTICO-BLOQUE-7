@@ -30,8 +30,12 @@ S -> L : isDisponible()
 activate L
 L --> S : disponible
 deactivate L
+S -> PR : existsByLibroIdAndFechaDevolucionIsNull(libroId)
+activate PR
+PR --> S : tienePrestamoActivo
+deactivate PR
 
-alt disponible == true [prestamo exitoso]
+alt disponible y sin prestamo activo [prestamo exitoso]
   S -> L : marcarPrestado()
   activate L
   L --> S
@@ -50,7 +54,7 @@ alt disponible == true [prestamo exitoso]
   S --> C : p
   C -> C : PrestamoResponse.desde(p)
   C --> Usuario : 201 Created + PrestamoResponse
-else disponible == false [libro no disponible]
+else no disponible o con prestamo activo [R1, R5]
   S --> C : throw LibroNoDisponibleException
   note right of S : no se escribe nada (R1, R4)
   C --> Usuario : 409 Conflict (ManejadorExcepciones)

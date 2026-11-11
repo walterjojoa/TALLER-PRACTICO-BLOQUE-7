@@ -124,7 +124,7 @@ note for Prestamo "OBS 5: fechaDevolucion null = préstamo activo (R5)"
       <ul>
         <li><b>Consultar:</b> buscar estudiante por id, buscar libro por id, listar préstamos y saber si un libro tiene préstamo activo.</li>
         <li><b>Validar:</b> que la solicitud traiga ids no nulos (R4), que existan estudiante y libro, y que el libro esté disponible (R1 y R5).</li>
-        <li><b>Guardar:</b> persistir el préstamo nuevo y el libro con <code>disponible = false</code> (R2 y R3), las dos cosas en una misma transacción.</li>
+        <li><b>Guardar:</b> persistir el préstamo nuevo y el libro con <code>disponible = false</code> (R2 y R3), sin dejar datos a medias.</li>
       </ul></div>
     <div><h3>d) Responsabilidades que faltan</h3>
       <p><b>HTTP:</b> nadie recibe <code>POST /api/prestamos</code>, convierte el JSON en un objeto, valida el formato ni traduce el resultado a códigos 201, 404 o 409. Falta un <code>PrestamoController</code>, con un DTO <code>PrestamoRequest</code> y un manejador de excepciones. <b>Datos:</b> las listas en memoria no persisten ni permiten búsquedas por id. Faltan <code>EstudianteRepository</code>, <code>LibroRepository</code> y <code>PrestamoRepository</code>.</p></div>
@@ -163,8 +163,9 @@ class PrestamoController {
 }
 class ManejadorExcepciones {
   <<RestControllerAdvice>>
-  +manejarNoEncontrado(ex) ResponseEntity
-  +manejarNoDisponible(ex) ResponseEntity
+  +manejarNoEncontrado(ex) ResponseEntity~Map~
+  +manejarNoDisponible(ex) ResponseEntity~Map~
+  +manejarSolicitudInvalida(ex) ResponseEntity~Map~
 }
 class PrestamoRequest {
   <<record DTO>>
@@ -291,7 +292,9 @@ S->>LR: findById(libroId)
 LR-->>S: Optional Libro (vacío = 404)
 S->>L: isDisponible()
 L-->>S: disponible
-alt disponible == true · préstamo exitoso
+S->>PR: existsByLibroIdAndFechaDevolucionIsNull(libroId)
+PR-->>S: tienePrestamoActivo
+alt disponible y sin préstamo activo · préstamo exitoso
   S->>L: marcarPrestado()
   S->>P: «create» Prestamo(estudiante, libro, LocalDate.now())
   S->>PR: save(p)
@@ -302,7 +305,7 @@ alt disponible == true · préstamo exitoso
   S-->>C: p
   C->>C: PrestamoResponse.desde(p)
   C-->>U: 201 Created + PrestamoResponse
-else disponible == false · libro no disponible
+else no disponible o con préstamo activo · 409
   S--)C: throw LibroNoDisponibleException
   Note right of S: no se escribe nada (R1, R4)
   C-->>U: 409 Conflict (vía ManejadorExcepciones)
@@ -311,7 +314,7 @@ deactivate S
 deactivate C
   </pre></div>
   <div class="file">Archivo VP: <b>03_diagrama_secuencia_prestamo.puml</b></div>
-  <p class="note"><b>Verificación de trazabilidad.</b> Cada mensaje existe como operación en el diagrama de clases: <code>registrarPrestamo</code>, <code>findById</code>, <code>isDisponible</code>, <code>marcarPrestado</code>, el constructor <code>Prestamo(...)</code>, <code>save</code> y <code>desde</code>. Los caminos 404 (estudiante o libro inexistente) aparecen como notas porque el taller pide solo dos caminos.</p>
+  <p class="note"><b>Verificación de trazabilidad.</b> Cada mensaje existe como operación en el diagrama de clases: <code>registrarPrestamo</code>, <code>findById</code>, <code>isDisponible</code>, <code>existsByLibroIdAndFechaDevolucionIsNull</code>, <code>marcarPrestado</code>, el constructor <code>Prestamo(...)</code>, <code>save</code> y <code>desde</code>. Los caminos 404 (estudiante o libro inexistente) aparecen como notas porque el taller pide solo dos caminos.</p>
 </section>
 
 <!-- ACTIVIDADES 5 y 6 -->
@@ -345,7 +348,7 @@ deactivate C
     <div><h3>¿Qué patrón GRASP se reconoce en la coordinación? ¿Por qué un controlador GRASP no es necesariamente un @RestController?</h3>
       <p>El patrón <b>Controlador</b> (de caso de uso) está en <code>PrestamoService</code>: es el primer objeto fuera de la interfaz que recibe la operación del sistema <code>registrarPrestamo</code> y la coordina. El <code>@RestController</code> pertenece a la capa de presentación. Solo traduce HTTP, y si mañana la petición llega por consola o por mensajería, el controlador GRASP sigue siendo el mismo servicio. También aparecen Experto en información (<code>Libro</code>), Creador (el servicio crea <code>Prestamo</code>), Bajo acoplamiento e Indirección (los repositorios).</p></div>
     <div><h3>¿Dónde se ubica la regla de disponibilidad y por qué?</h3>
-      <p>En la capa de negocio. <code>PrestamoService</code> la hace cumplir dentro de la transacción, y <code>Libro</code> la protege con <code>isDisponible()</code> y <code>marcarPrestado()</code>, que lanza una excepción si el libro ya está prestado. No va en el controller, porque cualquier otra entrada podría saltársela. Tampoco va en el repositorio, que solo persiste datos. Así la regla se cumple aunque cambie la forma de entrada.</p></div>
+      <p>En la capa de negocio. <code>PrestamoService</code> la verifica antes de escribir (incluida la consulta de préstamo activo de R5), y <code>Libro</code> la protege con <code>isDisponible()</code> y <code>marcarPrestado()</code>, que lanza una excepción si el libro ya está prestado. No va en el controller, porque cualquier otra entrada podría saltársela. Tampoco va en el repositorio, que solo persiste datos. Así la regla se cumple aunque cambie la forma de entrada.</p></div>
     <div><h3>¿Qué relaciones UML conservaron y cuáles modificaron?</h3>
       <p><b>Conservadas:</b> Prestamo–Estudiante y Prestamo–Libro como asociaciones 0..* a 1, sin composición. <b>Modificadas:</b> se volvieron navegables solo desde <code>Prestamo</code>. Las tres asociaciones de <code>GestorPrestamos</code> con 0..* se eliminaron y su lugar lo ocupan asociaciones 1 a 1 hacia los repositorios. <b>Nuevas:</b> generalización de interfaces hacia <code>MongoRepository</code> y dependencias «use», «create» y «throw» para DTO, creación y excepciones.</p></div>
     <div><h3>¿Cómo se comprueba la trazabilidad requisito → clase → operación → prueba?</h3>
@@ -371,7 +374,7 @@ deactivate C
     <li><b>Se elimina GestorPrestamos.</b> Era un objeto Dios con listas en memoria. Sus responsabilidades se reparten entre el servicio y los repositorios.</li>
     <li><b>El servicio es el Controlador GRASP</b> del caso de uso. Valida todo antes de escribir (R4). MongoDB es atómico por documento y sin replica set no hay transacciones entre documentos, así que se guarda primero el préstamo y luego el libro: si lo segundo fallara, la consulta de R5 sigue bloqueando un segundo préstamo.</li>
     <li><b>La regla de disponibilidad vive en el dominio.</b> <code>Libro.marcarPrestado()</code> valida antes de cambiar el estado (Experto en información) y se retira <code>setDisponible()</code> como vía pública.</li>
-    <li><b>Los DTO separan la API de las entidades.</b> <code>PrestamoRequest</code> solo trae ids validados y <code>PrestamoResponse</code> evita exponer la entidad JPA.</li>
+    <li><b>Los DTO separan la API de las entidades.</b> <code>PrestamoRequest</code> solo trae ids validados y <code>PrestamoResponse</code> evita exponer el documento de MongoDB.</li>
     <li><b>Errores explícitos.</b> Hay dos excepciones de negocio que un <code>@RestControllerAdvice</code> traduce a 404 y 409, así el controller no tiene condicionales de negocio.</li>
     <li><b>Asociaciones sin composición</b> entre entidades, porque sus ciclos de vida son independientes. El préstamo activo se reconoce por <code>fechaDevolucion == null</code> (R5).</li>
     <li><b>Repositorios como interfaces</b> que extienden <code>MongoRepository</code>, sin realización propia. La concurrencia (dos préstamos simultáneos) se deja anotada: se resolvería con bloqueo optimista (<code>@Version</code>), pero no se profundiza.</li>

@@ -12,8 +12,9 @@ package "controller" {
     + listar() : ResponseEntity<List<PrestamoResponse>>
   }
   class ManejadorExcepciones <<RestControllerAdvice>> {
-    + manejarNoEncontrado(ex : RecursoNoEncontradoException) : ResponseEntity<String>
-    + manejarNoDisponible(ex : LibroNoDisponibleException) : ResponseEntity<String>
+    + manejarNoEncontrado(ex : RecursoNoEncontradoException) : ResponseEntity<Map<String, String>>
+    + manejarNoDisponible(ex : LibroNoDisponibleException) : ResponseEntity<Map<String, String>>
+    + manejarSolicitudInvalida(ex : MethodArgumentNotValidException) : ResponseEntity<Map<String, String>>
   }
 }
 

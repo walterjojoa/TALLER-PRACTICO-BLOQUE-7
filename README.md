@@ -39,7 +39,11 @@ Los diagramas 1, 3 y 4 están en el proyecto de Visual Paradigm `diagramas/visua
 
 ## Código · Proyecto Spring Boot
 
-Hecho con **Java 21, Maven, Spring Boot 4.1.2, Spring Web, Spring Data MongoDB y Validation**. Los paquetes siguen el diagrama de clases:
+Hecho con **Java 21, Maven, Spring Boot 4.1.2, Spring Web, Spring Data MongoDB y Validation**.
+
+> **Nota sobre la persistencia.** El enunciado propone Spring Data JPA con H2 para la demostración, pero la clase ("De la Web a una API REST con Spring Boot y MongoDB") y el repositorio de referencia del profesor implementan con **MongoDB**, así que se usó MongoDB. El diseño por capas, las clases y las reglas R1 a R5 son los mismos; solo cambia cómo el Repository guarda los datos. Las diferencias (sin transacción entre documentos y referencias por id) están justificadas en [`entregables/Decisiones_de_diseno.docx`](entregables/Decisiones_de_diseno.docx).
+
+Los paquetes siguen el diagrama de clases:
 
 ```
 smartlibrary/src/main/java/com/smartlibrary/
@@ -116,7 +120,7 @@ Al arrancar se cargan los estudiantes `est-1` y `est-2` y los libros `lib-1`, `l
 | Crear el préstamo | PrestamoService | Creador (GRASP): tiene estudiante, libro y fecha (R2) |
 | Cambiar disponibilidad | `Libro.marcarPrestado()` | Experto en información: el libro protege su propio estado (R3) |
 | Guardar cambios | PrestamoRepository y LibroRepository | `save()` en MongoDB, después de validar todo (R4). Primero el préstamo y luego el libro |
-| Devolver respuesta HTTP | PrestamoController y ManejadorExcepciones | 201 Created; las excepciones se traducen a 404 y 409 |
+| Devolver respuesta HTTP | PrestamoController y ManejadorExcepciones | 201 Created; las excepciones se traducen a 404 y 409, y los datos inválidos a 400 |
 
 ## Actividad 3 · Diagrama de clases por capas
 
@@ -131,7 +135,7 @@ Al arrancar se cargan los estudiantes `est-1` y `est-2` y los libros `lib-1`, `l
 
 ![Secuencia Registrar préstamo](diagramas/imagenes/03_Secuencia_Registrar_Prestamo.png)
 
-El diagrama tiene un fragmento `alt` con dos caminos: **préstamo exitoso** (201 Created) y **libro no disponible** (409 Conflict, sin escribir nada). Cada mensaje está enlazado a una operación del diagrama de clases.
+El Service busca al estudiante y el libro, verifica `isDisponible()` y consulta `existsByLibroIdAndFechaDevolucionIsNull` (R5). Después, un fragmento `alt` separa dos caminos: **préstamo exitoso** (201 Created) y **libro no disponible o con préstamo activo** (409 Conflict, sin escribir nada). Cada mensaje está enlazado a una operación del diagrama de clases y sigue el mismo orden que `PrestamoService.registrarPrestamo`.
 
 ## Actividades 5 y 6 · Pruebas
 
