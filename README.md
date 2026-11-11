@@ -14,11 +14,47 @@ Este taller rediseña el modelo de clases inicial de SmartLibrary (centrado en `
 │   │   └── SmartLibrary_Taller7.vpp         Proyecto Visual Paradigm con los 3 diagramas
 │   ├── imagenes/                            Diagramas exportados en PNG
 │   └── plantuml/                            Los mismos diagramas en PlantUML
+├── smartlibrary/                            Proyecto Spring Boot (código de la API)
+├── evidencias/
+│   ├── pruebas_automaticas.txt              Resultado de las pruebas JUnit (6 de 6 pasan)
+│   └── pruebas_api.md                       Peticiones HTTP reales a la API y sus respuestas
 └── solucion/
     └── taller_resuelto.html                 Solución completa (actividades 1 a 7)
 ```
 
 Para abrir los diagramas: en Visual Paradigm, *File → Open Project* y elegir `diagramas/visual-paradigm/SmartLibrary_Taller7.vpp`.
+
+## Código · Proyecto Spring Boot
+
+Hecho con **Java 21, Maven, Spring Boot 4.1.2, Spring Web, Spring Data JPA, Validation y H2**. Los paquetes siguen el diagrama de clases:
+
+```
+smartlibrary/src/main/java/com/smartlibrary/
+├── controller/   PrestamoController, ManejadorExcepciones
+├── service/      PrestamoService, RecursoNoEncontradoException, LibroNoDisponibleException
+├── repository/   EstudianteRepository, LibroRepository, PrestamoRepository
+├── model/        Estudiante, Libro, Prestamo
+└── dto/          PrestamoRequest, PrestamoResponse
+```
+
+### Cómo ejecutarlo
+
+Requiere JDK 21. No hace falta instalar Maven, porque el proyecto trae Maven Wrapper.
+
+```bash
+cd smartlibrary
+./mvnw test             # corre las 6 pruebas automáticas
+./mvnw spring-boot:run  # levanta la API en http://localhost:8080
+```
+
+En Windows se usa `mvnw.cmd` en lugar de `./mvnw`. Al arrancar, `data.sql` carga 2 estudiantes (ids 1 y 2) y 3 libros disponibles (ids 1, 2 y 3). La consola de H2 queda en `http://localhost:8080/h2-console`, con la URL JDBC `jdbc:h2:mem:smartlibrary`.
+
+### Endpoints
+
+| Método | Ruta | Cuerpo | Respuestas |
+|---|---|---|---|
+| POST | `/api/prestamos` | `{"estudianteId": 1, "libroId": 1}` | 201, 400, 404, 409 |
+| GET | `/api/prestamos` | — | 200 |
 
 ## Reglas del caso
 
@@ -66,15 +102,18 @@ Para abrir los diagramas: en Visual Paradigm, *File → Open Project* y elegir `
 
 El diagrama tiene un fragmento `alt` con dos caminos: **préstamo exitoso** (201 Created) y **libro no disponible** (409 Conflict, con rollback). Cada mensaje está enlazado a una operación del diagrama de clases.
 
-## Actividades 5 y 6 · Pruebas esperadas
+## Actividades 5 y 6 · Pruebas
 
-| Escenario | Resultado esperado |
-|---|---|
-| Préstamo de libro disponible | 201 Created y préstamo registrado |
-| Libro ya prestado | 409 Conflict, sin préstamo nuevo |
-| Estudiante inexistente | 404 Not Found |
-| Libro inexistente | 404 Not Found |
-| Consulta de préstamos | 200 OK con registros |
+Todos los escenarios están cubiertos en `PrestamoControllerTest` y se verificaron también con peticiones HTTP reales a la API (ver [`evidencias/`](evidencias/)).
+
+| Escenario | Resultado esperado | Resultado obtenido |
+|---|---|---|
+| Préstamo de libro disponible | 201 Created y préstamo registrado | ✅ 201 |
+| Libro ya prestado | 409 Conflict, sin préstamo nuevo | ✅ 409 |
+| Estudiante inexistente | 404 Not Found | ✅ 404 |
+| Libro inexistente | 404 Not Found | ✅ 404 |
+| Consulta de préstamos | 200 OK con registros | ✅ 200 |
+| Solicitud sin `libroId` (extra, R4) | 400 Bad Request | ✅ 400 |
 
 ## Actividad 7 · Defensa
 

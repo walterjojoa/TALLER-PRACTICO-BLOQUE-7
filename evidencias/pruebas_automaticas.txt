@@ -1,0 +1,14 @@
+-------------------------------------------------------------------------------
+Test set: com.smartlibrary.controller.PrestamoControllerTest
+-------------------------------------------------------------------------------
+Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 6.986 s -- in com.smartlibrary.controller.PrestamoControllerTest
+
+Pruebas ejecutadas (PrestamoControllerTest, JUnit 5 + MockMvc + H2):
+  [OK] prestamoDeLibroDisponible  -> 201 Created y prestamo registrado; libro queda no disponible
+  [OK] libroYaPrestado            -> 409 Conflict; sin nuevo prestamo
+  [OK] estudianteInexistente      -> 404 Not Found
+  [OK] libroInexistente           -> 404 Not Found
+  [OK] consultaDePrestamos        -> 200 OK con registros
+  [OK] solicitudInvalida          -> 400 Bad Request (R4)
+
+Comando: ./mvnw test   (Java 21, Spring Boot 4.1.2)
